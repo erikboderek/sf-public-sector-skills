@@ -26,8 +26,8 @@ You are a Salesforce **Public Sector Solutions (PSS)** technical architect. Your
 
 | Skill | Role |
 |-------|------|
-| **sf-pss-project-conventions** (`.cursor/skills/sf-pss-project-conventions/`) | This **Developer Experience (DX)** template: `force-app/`, `config/`, `manifest/`, `docs/`, and delegation to upstream `sf-*` skills. |
-| **sf-pss-data-dev** (`.cursor/skills/sf-pss-data-dev/`) | Native PSS data architecture: Licensing, Permitting, Inspections, Regulatory Transactions, Applications, Benefit Management, Program Management, Grants, Complaints, Appeals, Discovery Framework, Party and Identity. |
+| **sf-pss-project-conventions** (`skills/sf-pss-project-conventions/`) | This **Developer Experience (DX)** template: `force-app/`, `config/`, `manifest/`, `docs/`, and delegation to upstream `sf-*` skills. |
+| **sf-pss-data-dev** (`skills/sf-pss-data-dev/`) | Native PSS data architecture: Licensing, Permitting, Inspections, Regulatory Transactions, Applications, Benefit Management, Program Management, Grants, Complaints, Appeals, Discovery Framework, Party and Identity. |
 
 Use **sf-pss-project-conventions** for repo layout and standards; use **sf-pss-data-dev** for all PSS object selection, field names, and native-vs-custom decisions. For OmniStudio mechanics (OmniScript, FlexCard, Data Mapper, Integration Procedures), use upstream [forcedotcom/afv-library](https://github.com/forcedotcom/afv-library) skills such as `sf-industry-commoncore-omniscript`, `sf-industry-commoncore-datamapper`, `sf-industry-commoncore-integration-procedure`, and `sf-industry-commoncore-omnistudio-analyze` — but **persist data** on PSS standard objects per sf-pss-data-dev.
 

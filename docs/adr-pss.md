@@ -172,8 +172,8 @@ PSS stores asserted facts in **`ApplicationFormField.FieldValue`** (or equivalen
 | Fee estimate or billing snapshot | `ApplicationFormField` or integration-only | Per integration ADR | Native fee objects vary; confirm system of record. |
 | Notary / witness / certification document | `DocumentChecklistItem` + `ContentDocument` | Notarized PDF | Clerk **`RecordAction`** as needed. |
 | Privacy / consent acknowledgment | `ApplicationFormField` (boolean/date) | `FieldValue` | “Read and acknowledged” for online channel. |
-| Clerk notes / verifier identity | `InteractionSummary` | `SummaryNotes`, `ChannelCode`, … | Optional `Case` link. |
-| Demo / parent regulatory citation | `RegulatoryCode` | `Name`, `Description`, `StatusCode` | Do not assume `RegulatoryCodeNumber` exists in every org—field names vary by release/package. Use **Object Manager** before Flow/IP writes. |
+| Clerk notes / verifier identity | `InteractionSummary` | `MeetingNotes`, … | Optional `Case` link. No `SummaryNotes` or `ChannelCode` field on `InteractionSummary`. |
+| Demo / parent regulatory citation | `RegulatoryCode` | `Name`, `Description`, `IsActive` (boolean formula), `EffectiveFrom`, `EffectiveTo` | No `StatusCode` or `RegulatoryCodeNumber` field. Parent is `RegulatoryAuthority` (not `Account`). Use **Object Manager** before Flow/IP writes. |
 | Regulatory txn link to application | `RegulatoryTxn` | *dynamic* — lookup or polymorphic reference to **`IndividualApplication`** and/or **`BusinessLicenseApplication`** | API name differs by org. Use **Invocable Apex** with `Schema` describe or document the org-specific field in a follow-on **integration ADR**. |
 | Citizen save / prefill | OmniStudio | `OmniIntegrationProcedure` + `OmniDataTransform` bundle names | Logical surface is **procedure key** + **DataRaptor (DR)** developer names—not a PSS sObject column. |
 | Portal / clerk summary | OmniStudio | `OmniUiCard` (FlexCard) definition | Displays application, checklist, and txn status; reads via **IP** / **DR**—see FlexCard skill. |

@@ -1,14 +1,22 @@
 ---
 name: sf-pss-project-conventions
-description: >
-  Public Sector Solutions (PSS) Salesforce Developer Experience (DX) template conventions: project layout, docs, and when to delegate
-  to forcedotcom/afv-library (sf-apex, sf-flow, sf-lwc, sf-industry-commoncore-*).
-  TRIGGER when: work happens in this repo’s force-app, config, or docs and team
-  standards matter. DO NOT TRIGGER when: generic Apex/LWC/OmniStudio-only tasks with
-  no PSS-specific context (use sf-apex, sf-lwc, sf-industry-commoncore-* directly).
-license: MIT
+description: "PSS Salesforce DX template conventions: project layout, docs, and delegation to afv-library skills. TRIGGER: work in force-app/config/docs where team standards matter. SKIP: generic Apex/LWC/OmniStudio-only tasks without PSS context."
 metadata:
-  version: "1.0.5"
+  version: "1.0"
+  domains:
+    - "Government"
+  minApiVersion: "66.0"
+  accessCheck: "Requires Salesforce Public Sector Solutions add-on license."
+  relatedSkills:
+    - "platform-apex-generate"
+    - "experience-lwc-generate"
+    - "automation-flow-generate"
+    - "omnistudio-omniscript-generate"
+    - "omnistudio-flexcard-generate"
+    - "omnistudio-integration-procedure-generate"
+    - "omnistudio-dependencies-analyze"
+    - "platform-apex-test-run"
+    - "platform-apex-logs-debug"
 ---
 
 # sf-pss-project-conventions
@@ -17,7 +25,7 @@ Use this skill when implementing or reviewing work **in the PSS program Develope
 
 ## Principles
 
-1. **Prefer upstream skills for platform work** — Use installed `sf-*` skills from [forcedotcom/afv-library](https://github.com/forcedotcom/afv-library) for Apex, Flow, **Lightning Web Components (LWC)**, **Salesforce Object Query Language (SOQL)**, OmniStudio Common Core, Agentforce, deploy, etc.
+1. **Prefer upstream skills for platform work** — Use installed skills from [forcedotcom/afv-library](https://github.com/forcedotcom/afv-library) for Apex (`platform-apex-generate`), Flow (`automation-flow-generate`), **Lightning Web Components (LWC)** (`experience-lwc-generate`), OmniStudio, Agentforce, deploy, etc.
 2. **Use this skill for repo-specific rules** — Follow `config/`, `docs/`, and `manifest/` conventions described in this project’s docs.
 3. **Single source of truth** — Metadata under `force-app/main/default/`; high-level status and **Architecture Decision Records (ADRs)** under `docs/`.
 4. **Applicant object choice (PSS)** — When a **business** applies for a **business license**, **`BusinessLicenseApplication`** is the native filing object; **`IndividualApplication`** is for **person** applicants (benefits, individual program intake, etc.). See **`sf-pss-data-dev`** and **`references/sf-pss-core-objects.md`**.
@@ -27,10 +35,10 @@ Use this skill when implementing or reviewing work **in the PSS program Develope
 | Topic | Delegate to |
 |-------|-------------|
 | Public Sector Solutions native objects (licensing, permitting, benefits, grants, etc.) | `sf-pss-data-dev` (this add-on pack) |
-| OmniStudio authoring (OmniScript, FlexCard, **Integration Procedure (IP)**, Data Mapper) | `sf-industry-commoncore-omniscript`, `sf-industry-commoncore-flexcard`, `sf-industry-commoncore-integration-procedure`, `sf-industry-commoncore-datamapper` |
-| Cross-Omni dependency / namespace analysis | `sf-industry-commoncore-omnistudio-analyze` |
+| OmniStudio authoring (OmniScript, FlexCard, **Integration Procedure (IP)**, Data Mapper) | `omnistudio-omniscript-generate`, `omnistudio-flexcard-generate`, `omnistudio-integration-procedure-generate`, `omnistudio-datamapper-generate` |
+| Cross-Omni dependency / namespace analysis | `omnistudio-dependencies-analyze` |
 | Agentforce metadata, prompts, **generative artificial intelligence (GenAI)** | `sf-ai-agentforce`, `sf-ai-agentscript` |
-| Generic Salesforce code quality | `sf-apex`, `sf-testing`, `sf-debug` |
+| Generic Salesforce code quality | `platform-apex-generate`, `platform-apex-test-run`, `platform-apex-logs-debug` |
 
 ## Local references
 
@@ -44,4 +52,4 @@ Read project docs as needed (paths relative to repo root):
 
 ## Output expectations
 
-When answering, tie recommendations to this repository’s folders and docs when relevant; otherwise defer to the appropriate `sf-*` skill.
+When answering, tie recommendations to this repository’s folders and docs when relevant; otherwise defer to the appropriate afv-library skill.
