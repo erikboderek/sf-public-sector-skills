@@ -40,7 +40,8 @@ Represents an authorization issued by a regulatory agency (license, permit, or s
 ### `RegulatoryAuthorizationType`
 
 - Defines the authorization class (license type, permit class, service authorization type)
-- `Category` picklist: License, Permit, Service Request
+- `RegulatoryAuthCategory` — Picklist; authorization category field (**there is no `Category` field** — org-verified v68.0; verify picklist values in Object Manager per deployment)
+- `RegulatoryAuthCode` — Text(255), authorization code identifier
 - Linked from `BusinessLicense.RegulatoryAuthorizationTypeId` and `BusinessLicenseApplication.LicenseTypeId`
 - **There is no separate `LicenseType` object** — use `RegulatoryAuthorizationType`
 
@@ -105,14 +106,14 @@ Native PSS object that tracks a saved-but-not-yet-submitted application (draft /
 | Field | Type | Notes |
 |-------|------|-------|
 | `ApplicationName` | String(255) | Auto-generated draft name shown to the citizen |
-| `ApplicationType` | Restricted Picklist | **Five values only:** `ApplicationForm`, `BusinessLicenseApplication`, `BusinessPrescreening`, `IndividualApplication`, `PublicComplaint` — this is not a free-form wizard key |
+| `ApplicationType` | Restricted Picklist | `ApplicationForm`, `BusinessLicenseApplication`, `BusinessPrescreening`, `IndividualApplication`, `PublicComplaint` |
+| `ApplicantId` | Lookup(polymorphic) | Applicant identity on the draft — polymorphic (Contact/User/Account) |
+| `ApplicantInformation` | String | Supplemental applicant info |
+| `ApplicationCategory` | Picklist | Draft-level category; verify values in Object Manager per deployment |
 | `BusinessAccountNameId` | Lookup(Account) | Business-flow account link; copied to `BusinessLicenseApplication.AccountId` on promotion |
 | `IsSubmitted` | Boolean | Draft-vs-submitted flag; flip to `true` on promotion |
 | `SavedApplicationUrl` | URL(255) | Resume deep-link back into the OmniScript / Experience Cloud page |
-
-- **No `ApplicantId` field** — applicant identity is not tracked on the preliminary record
-- **No `ApplicationCategory` field** — that field lives on `IndividualApplication`
-- **No `SubmissionDate` field** — stamp `AppliedDate` on the filing parent on promotion
+| `SubmissionDate` | DateTime | Submission timestamp on the draft record |
 
 ### `IndividualApplication`
 
