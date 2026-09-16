@@ -35,7 +35,7 @@ Discovery Framework assessment object details overlap **Education Cloud Integrat
 
 ## Principles
 
-1. **Native-only**: Use PSS standard objects. Never propose custom objects for features covered by `BusinessLicense`, `BusinessLicenseApplication`, `IndividualApplication`, `Benefit`, `RegulatoryTxn`, `Permit`, `Inspection`, `Grant`, `Complaint`, `Appeal`, or their child objects.
+1. **Native-only**: Use PSS standard objects. Never propose custom objects for features covered by `BusinessLicense`, `BusinessLicenseApplication`, `IndividualApplication`, `Benefit`, `RegulatoryTxn`, `Permit`, `Inspection`, `FundingAward`, `FundingOpportunity`, `FundingDisbursement`, `Complaint`, `Appeal`, or their child objects.
 2. **API names first**: Always lead with the Salesforce **application programming interface (API)** name. Use field-level names (`StatusCode`, `LicensedEntityId`) not labels.
 3. **Relationship precision**: Distinguish lookups from master-detail; call out polymorphic lookups (`RelatedEntityId`, `SubjectEntityId`) explicitly and their implications for SOQL, rollup summaries, and sharing.
 4. **Party model**: All constituent identity resolves through `Individual` / `Party`. Do not anchor solutions to `Contact` alone.
@@ -71,9 +71,9 @@ Discovery Framework assessment object details overlap **Education Cloud Integrat
 
 ### Grants management
 
-- Pre-award: `GrantOpportunity` → `GrantApplication`
-- Post-award: `Grant` → `GrantBudget` → `GrantAllocation` (drawdown tracking)
-- Reporting periods: custom or `GrantAllocation` grouping by period; consider Accounting Subledger
+- Pre-award: `FundingOpportunity` → `IndividualApplication` (grantmaking context)
+- Post-award: `FundingAward` → `Budget` / `BudgetAllocation` → `FundingDisbursement` (drawdown tracking)
+- Reporting periods: custom or `FundingDisbursement` grouping by period; consider Accounting Subledger
 
 ### Complaints and appeals
 
@@ -97,7 +97,7 @@ Discovery Framework assessment object details overlap **Education Cloud Integrat
 | Fee calculation | `LicenseType`/`PermitType` fee fields | Tiered/complex fees → Revenue Cloud |
 | Field inspections | `Inspection` + `InspectionChecklistItem` | Large offline datasets → Mobile SDK |
 | Benefit payments | `BenefitDisbursement` | ACH/EFT disbursement → Financial Services integration |
-| Grant reporting | `GrantAllocation` grouping | Federal SEFA reporting → Accounting Subledger |
+| Grant reporting | `FundingDisbursement` grouping | Federal SEFA reporting → Accounting Subledger |
 
 ## Response style
 
