@@ -4,9 +4,9 @@
 
 ## Guiding Principles
 
-- **Native PSS objects only** — Anchor service requests on the **correct application parent** for the scenario, then on shared regulatory and checklist objects. Use **`IndividualApplication`** when the **applicant is a person** (`ApplicantId` → `Individual`)—for example benefits, many personal permits, and program intake where the filing is citizen-centric. Use **`BusinessLicenseApplication`** for **business license** apply or renew: it is the native filing spine—**`AccountId`** → **`Account`** (B2B **Account** or **Person Account** for sole proprietors) and **`ApplicantId`** / **`PrimaryOwnerId`** → **`Contact`** (including **PersonContact** for Person Accounts) per the PSS object model—**do not** substitute **`IndividualApplication`** as the primary record for that case. Owners or agents may still appear on **`RegulatoryTxnParty`** or related roles per Object Manager. Use **`PreliminaryApplicationRef`** as the **portal-side draft / save-and-resume** anchor (guest and authenticated) before either filing parent is committed; promote to the correct parent on submit (see **ADR** [docs/adr-pss.md](adr-pss.md)). For either path, use **`RegulatoryTxn`**, **`ApplicationForm`** / **`ApplicationFormSection`** / **`ApplicationFormField`** (confirm which parent your release attaches forms to), **`RegulatoryTxnParty`**, **`DocumentChecklistItem`**, and **`ActionPlanTemplate`** / **`ActionPlan`** / **`RecordAction`** as applicable. Do not introduce custom objects for standard application, regulatory, document, or checklist capabilities covered by PSS and the Industries common layer.
+- **Native PSS objects only** — Anchor service requests on the **correct application parent** for the scenario, then on shared regulatory and checklist objects. Use **`IndividualApplication`** when the **applicant is a person** (`ContactId` → `Contact`)—for example benefits, many personal permits, and program intake where the filing is citizen-centric. Use **`BusinessLicenseApplication`** for **business license** apply or renew: it is the native filing spine—**`AccountId`** → **`Account`** (B2B **Account** or **Person Account** for sole proprietors) and **`ApplicantId`** / **`PrimaryOwnerId`** → **`Contact`** (including **PersonContact** for Person Accounts) per the PSS object model—**do not** substitute **`IndividualApplication`** as the primary record for that case. Use **`PreliminaryApplicationRef`** as the **portal-side draft / save-and-resume** anchor (guest and authenticated) before either filing parent is committed; promote to the correct parent on submit (see **ADR** [docs/adr-pss.md](adr-pss.md)). For either path, use **`ApplicationForm`** / **`ApplicationFormSection`** / **`ApplicationFormField`** (confirm which parent your release attaches forms to), **`DocumentChecklistItem`**, and **`ActionPlanTemplate`** / **`ActionPlan`** / **`RecordAction`** as applicable. Do not introduce custom objects for standard application, regulatory, document, or checklist capabilities covered by PSS and the Industries common layer.
 - **OmniStudio for all citizen-facing intake** — Residents and external partners use OmniScript on Experience Cloud for guided capture, uploads, and submission; no custom **Lightning Web Components (LWC)** portal for standard intake patterns.
-- **Party / Individual as constituent identity spine** — Resolve applicants and related persons to `Individual` and `Party` where that is your person-program model; use `ContactPointAddress`, `ContactPointPhone`, and `ContactPointEmail` for structured addresses and channels; use `Account` for organizational parties (sponsor, employer, provider agency, **licensed business**, or **Person Account** where your org uses that pattern) as appropriate.
+- **Contact / Account as constituent identity spine** — Resolve person applicants to `Contact`; use `Account` for organizational parties (sponsor, employer, provider agency, **licensed business**, or **Person Account** where your org uses that pattern); use `ContactPointAddress`, `ContactPointPhone`, and `ContactPointEmail` for structured addresses and channels.
 - **Compliant Data Sharing (CDS) from day one if sensitive data is involved** — If legal and product confirm purpose-limited access, cross-program sharing of sensitive **personally identifiable information (PII)**, or Community users needing CDS-protected data, provision `DataUsePurpose`, `AuthorizationFormConsent`, `IndividualShare`, and related CDS patterns in Phase 1 alongside Experience Cloud tiering (e.g. Customer Community Plus). If CDS is out of scope for **minimum viable product (MVP)**, document the waiver, deliver strict **field-level security (FLS)** and **organization-wide defaults (OWD)** and audit via `InteractionSummary`, and define explicit criteria for a future CDS cut-in.
 
 **Related architecture:** [docs/adr-pss.md](adr-pss.md).
@@ -20,14 +20,12 @@ flowchart LR
     PAR[PreliminaryApplicationRef]
   end
   subgraph partyIdentity [PartyIdentity]
-    IND[Individual]
     ACC[Account_B2B_or_PersonAcct]
     CNTCT[Contact_incl_PersonContact]
   end
   subgraph coreRecords [CoreRecords]
     IA[IndividualApplication]
     BLA[BusinessLicenseApplication]
-    RT[RegulatoryTxn]
   end
   subgraph clerkChannel [ClerkChannel]
     CONS[ConsoleWorkspace]
@@ -37,21 +35,18 @@ flowchart LR
   OS -->|save/resume| PAR
   PAR -->|submit person| IA
   PAR -->|submit business| BLA
-  PAR -->|ApplicantId poly| IND
+  PAR -->|ApplicantId poly| CNTCT
   PAR -->|BusinessAccountNameId| ACC
-  IA -->|ApplicantId| IND
+  IA -->|ContactId| CNTCT
   BLA -->|AccountId| ACC
   BLA -->|Applicant_or_PrimaryOwner| CNTCT
-  IA --> RT
-  BLA --> RT
   IA --> CONS
   BLA --> CONS
-  RT --> CONS
   CONS --> AP
   CONS --> DCI
 ```
 
-*Diagram: **`PreliminaryApplicationRef`** is the portal-side draft anchor (guest or authenticated; `ApplicantId` polymorphic to `Contact` / `User` / `Account`); on submit it promotes to **`IndividualApplication`** (person; **`Individual`** applicant) or **`BusinessLicenseApplication`** (business; **`Account`** plus **`Contact`** for submitter/primary owner), and **`IsSubmitted`** + **`SubmissionDate`** flip on the preliminary record. Validate **`AccountId`**, **`ApplicantId`**, **`PrimaryOwnerId`**, **`LicensedEntity`**, and **`ApplicationForm`** parents in Object Manager for your PSS release.*
+*Diagram: **`PreliminaryApplicationRef`** is the portal-side draft anchor (guest or authenticated; `ApplicantId` polymorphic to `Contact` / `User` / `Account`); on submit it promotes to **`IndividualApplication`** (person; **`Contact`** applicant via `ContactId`) or **`BusinessLicenseApplication`** (business; **`Account`** plus **`Contact`** for submitter/primary owner), and **`IsSubmitted`** + **`SubmissionDate`** flip on the preliminary record. Validate **`AccountId`**, **`ApplicantId`**, **`PrimaryOwnerId`**, **`ContactId`**, and **`ApplicationForm`** parents in Object Manager for your PSS release.*
 
 ---
 
@@ -59,18 +54,18 @@ flowchart LR
 
 ### What we build first and why
 
-Establish **identity**, **security**, and the **metadata spine** so every later phase attaches to the same patterns: `Individual` / `Party`, baseline `ApplicationType` and `RegulatoryAuthorizationType` records, Experience Cloud access, a minimal citizen OmniScript that persists a draft filing, and a clerk workspace to open the same records. This phase intentionally avoids full agency form parity so Phase 2 can deliver the first complete vertical slice (one high-volume service path) on a stable platform.
+Establish **identity**, **security**, and the **metadata spine** so every later phase attaches to the same patterns: `Contact` / `Account` identity model, baseline `ApplicationType` and `RegulatoryAuthorizationType` records, Experience Cloud access, a minimal citizen OmniScript that persists a draft filing, and a clerk workspace to open the same records. This phase intentionally avoids full agency form parity so Phase 2 can deliver the first complete vertical slice (one high-volume service path) on a stable platform.
 
 ### Objects configured
 
 | Area | Objects / configuration |
 |------|-------------------------|
-| Identity | `Individual`, `Party`; optional `PartyProfile` |
+| Identity | `Contact` (person applicant); `Account` (organizational party); optional `PartyProfile` |
 | Channels | `ContactPointAddress`, `ContactPointPhone`, `ContactPointEmail` |
 | Organizations | `Account` (B2B **or** **Person Account** per org policy) for partner agencies, employers, sponsors, **licensed businesses**, sole proprietors, or vendors as needed |
 | Applications | `ApplicationType` records for each major service program you offer; plan which programs use **`IndividualApplication`** (person applicant) vs **`BusinessLicenseApplication`** (business license apply/renew) |
 | Draft / save-and-resume | **`PreliminaryApplicationRef`** as the portal-side draft record for both **guest** and **authenticated** intake (`ApplicantId` polymorphic to `Contact` / `User` / `Account`); carries **`ApplicationType`** (wizard key), **`ApplicationCategory`** (grouping), **`ApplicationName`** (auto-generated), **`SavedApplicationUrl`** (resume URL), **`IsSubmitted`** / **`SubmissionDate`**, and **`BusinessAccountNameId`** for business flows |
-| Business licensing | Where in scope: **`BusinessLicenseApplication`** with **`AccountId`**, **`ApplicantId`**, **`PrimaryOwnerId`** (see Guiding Principles) and related **`BusinessLicense`** / **`LicenseType`** / **`LicensedEntity`**—not modeled on **`IndividualApplication`** alone |
+| Business licensing | Where in scope: **`BusinessLicenseApplication`** with **`AccountId`**, **`ApplicantId`**, **`PrimaryOwnerId`** (see Guiding Principles) and related **`BusinessLicense`** / **`RegulatoryAuthorizationType`** (via `LicenseTypeId`) / **`AccountId`** and **`ContactId`** on issued **`BusinessLicense`**—not modeled on **`IndividualApplication`** alone |
 | Regulatory | `RegulatoryAuthorizationType` **stubs** (metadata only or minimal records)—**examples:** `Benefit_NewApplication_SLG`, `Permit_Initial_SLG`, `LicenseRenewal_SLG` (use your program’s API names; replace any placeholder keys shipped with this template) |
 | Forms | Minimal `ApplicationForm` / `ApplicationFormSection` / `ApplicationFormField` shell and **naming standards** (`DeveloperName` conventions for reporting) |
 | Documents | Optional: parent polymorphism design for `DocumentChecklistItem` (application vs regulatory txn) |
@@ -79,20 +74,20 @@ Establish **identity**, **security**, and the **metadata spine** so every later 
 ### OmniScripts built
 
 - Experience Cloud **site shell** and authentication handoff (login / registration per org policy).
-- **One minimal citizen OmniScript** (person path): start or resume a **`PreliminaryApplicationRef`** (guest or authenticated; **`ApplicantId`** polymorphic to `Contact` / `User` / `Account`) with **`ApplicationType`** = wizard key, **`ApplicationCategory`** = grouping, **`SavedApplicationUrl`** = deep-link back into the OmniScript, **`IsSubmitted = false`**. On **submit**, promote to **`IndividualApplication`** (bind primary applicant to **`Individual`**, capture basic contact/address into `ContactPoint*`, set `ApplicationType` and intended `RegulatoryAuthorizationType` or equivalent routing field), then flip **`IsSubmitted = true`** + **`SubmissionDate`** on the preliminary record — not full checklist or agency-form parity.
+- **One minimal citizen OmniScript** (person path): start or resume a **`PreliminaryApplicationRef`** (guest or authenticated; **`ApplicantId`** polymorphic to `Contact` / `User` / `Account`) with **`ApplicationType`** = wizard key, **`ApplicationCategory`** = grouping, **`SavedApplicationUrl`** = deep-link back into the OmniScript, **`IsSubmitted = false`**. On **submit**, promote to **`IndividualApplication`** (bind primary applicant via `ContactId` → `Contact`, capture basic contact/address into `ContactPoint*`, set `ApplicationType` and intended `RegulatoryAuthorizationType` or equivalent routing field), then flip **`IsSubmitted = true`** + **`SubmissionDate`** on the preliminary record — not full checklist or agency-form parity.
 - **Optional second minimal script or branch** (business license path): start or resume a **`PreliminaryApplicationRef`** with **`BusinessAccountNameId`** set for the business flow. On **submit**, promote to **`BusinessLicenseApplication`** — copy **`BusinessAccountNameId`** to **`AccountId`** (business **Account** or **Person Account**), set **`ApplicantId`** / **`PrimaryOwnerId`** (**`Contact`** / **PersonContact**), license type and routing — then stamp **`IsSubmitted`** + **`SubmissionDate`** on the preliminary record. Same portal and security patterns as the person path; confirm in Object Manager how **`ApplicationForm`** (or equivalent) attaches to **`BusinessLicenseApplication`** in your API version.
 
 ### Flows automated
 
-- **Record-triggered or subflow**: on **`IndividualApplication`** or **`BusinessLicenseApplication`** creation or status transition (per pilot), create and link a **`RegulatoryTxn`** with the correct `RegulatoryAuthorizationTypeId` (or subflow invoked from OmniScript Integration Procedure).
-- **Draft promotion**: from OmniScript submit (Integration Procedure or Flow), hydrate the correct filing parent from the **`PreliminaryApplicationRef`** record — copy **`BusinessAccountNameId`** → **`AccountId`** for business flows, resolve **`ApplicantId`** to **`Individual`** for person flows — then stamp **`IsSubmitted = true`** + **`SubmissionDate`** on the preliminary record.
+- **Record-triggered or subflow**: on **`IndividualApplication`** or **`BusinessLicenseApplication`** creation or status transition (per pilot), create and link an **`ActionPlan`** from the matching **`ActionPlanTemplate`** with the correct `RegulatoryAuthorizationTypeId` (or subflow invoked from OmniScript Integration Procedure).
+- **Draft promotion**: from OmniScript submit (Integration Procedure or Flow), hydrate the correct filing parent from the **`PreliminaryApplicationRef`** record — copy **`BusinessAccountNameId`** → **`AccountId`** for business flows, resolve `ContactId` to `Contact` for person flows — then stamp **`IsSubmitted = true`** + **`SubmissionDate`** on the preliminary record.
 - **Document checklist seed**: create initial **`DocumentChecklistItem`** rows from authorization type (empty or placeholder until Phase 2 defines full lists).
-- Optional: **guest-to-Individual** / contact resolution subflow (org-specific; align with identity strategy).
+- Optional: **guest-to-Contact** resolution subflow (org-specific; align with identity strategy).
 
 ### Success criteria
 
-- Authenticated community user (or approved guest path) can create a **draft** **`PreliminaryApplicationRef`** with a working **`SavedApplicationUrl`** for return visits, then promote it on submit to an **`IndividualApplication`** linked to an **`Individual`** *or* (where scoped) a **`BusinessLicenseApplication`** for a **business** pilot, and see the promoted record in the portal.
-- Clerk can open the same **application** record (`IndividualApplication` or `BusinessLicenseApplication` as used) and related **`RegulatoryTxn`** in a **console or workspace** app.
+- Authenticated community user (or approved guest path) can create a **draft** **`PreliminaryApplicationRef`** with a working **`SavedApplicationUrl`** for return visits, then promote it on submit to an **`IndividualApplication`** linked via `ContactId` to a `Contact` *or* (where scoped) a **`BusinessLicenseApplication`** for a **business** pilot, and see the promoted record in the portal.
+- Clerk can open the same **application** record (`IndividualApplication` or `BusinessLicenseApplication` as used) and related **`ActionPlan`** / **`DocumentChecklistItem`** in a **console or workspace** app.
 - **Field-level security (FLS)**, **organization-wide defaults (OWD)**, and sharing for PII-heavy fields are documented and enforced; **CDS** configured **if** in scope per Guiding Principles, otherwise written waiver and cut-in criteria are signed off.
 - **Continuous integration and continuous delivery (CI/CD)** can deploy **OmniStudio** artifacts to a PSS sandbox without manual-only steps (definition of “green” pipeline agreed with team).
 
@@ -107,7 +102,7 @@ Deliver the **highest-volume service path** for your chosen pilot program—for 
 ### Objects configured
 
 - Full **`ApplicationForm` / `ApplicationFormSection` / `ApplicationFormField`** definitions for that pilot path (program-specific identifiers, eligibility questions, income or qualification fields, government-issued ID where allowed, fee or copay placeholders, etc.—all with strict **field-level security (FLS)** as appropriate). Parent the form model on **`IndividualApplication`** or **`BusinessLicenseApplication`** to match the pilot (see Guiding Principles).
-- **`RegulatoryTxnParty`** roles that match your program (applicant, household member, sponsor, provider, etc.).
+- Applicant and party role fields on **`BusinessLicenseApplication`** (`ApplicantId`, `PrimaryOwnerId`) or `ContactId` on **`IndividualApplication`**—no separate party-role object is needed for standard intake patterns.
 - **`DocumentChecklistItem`** types aligned to your agency’s required evidence (ID, proof of address, certifications, signed attestations, third-party letters).
 - **`ActionPlanTemplate`** for the pilot (for example `APT_ServicePath_Pilot_SLG`—rename in org) with **`RecordAction`** sequence: evidence collection → conditional verification steps → fee or copay → clerk completeness → decision/issuance (adjust steps to your policy).
 
@@ -117,7 +112,7 @@ Deliver the **highest-volume service path** for your chosen pilot program—for 
 
 ### Flows automated
 
-- **Submit**: transition **`IndividualApplication.StatusCode`** *or* **`BusinessLicenseApplication`** status (whichever the pilot uses) and **`RegulatoryTxn.StatusCode`** on valid submission; stamp `SubmittedDate` where used on the application object.
+- **Submit**: transition **`IndividualApplication.InternalStatus`** *or* **`BusinessLicenseApplication.Status`** (whichever the pilot uses) on valid submission; stamp `AppliedDate` where used on the application object.
 - **Clerk**: Screen Flows or quick actions from **`RecordAction`** to mark verification steps, update checklist status, and move transaction toward approval.
 - Optional: **Integration Procedure (IP)** stubs for fee quotes or external eligibility checks when an integration ADR exists.
 
@@ -151,7 +146,7 @@ Add **additional service paths** your program requires—renewals, amendments, a
 ### Flows automated
 
 - **Conditional plan creation**: subflow or Apex/OmniStudio logic to attach the correct **`ActionPlanTemplate`** when `RegulatoryAuthorizationType` is set.
-- **Branching**: program-specific pending states on `RegulatoryTxn` or application status when flagged; clerk resolution flows.
+- **Branching**: program-specific pending states on application status (`InternalStatus` / `Status`) when flagged; clerk resolution flows.
 - **Integration hooks** for read-only fields when an external system is the source of truth.
 
 ### Success criteria
@@ -167,18 +162,18 @@ Add **additional service paths** your program requires—renewals, amendments, a
 | Phase | Depends On | Risk if Skipped |
 |-------|------------|-----------------|
 | Phase 1 | PSS + Industries licenses; sandboxes with OmniStudio; Experience Cloud site; security model design; decision on CDS in scope | Unstable identity and sharing; rework of all citizen flows; compliance exposure |
-| Phase 1 | `Individual` / `Party` data model and community identity mapping agreed | Duplicate contacts, broken applicant linkage, poor 360 views |
-| Phase 2 | Phase 1 foundation (metadata spine, draft/submit pattern, clerk app) | Duplicate patterns per scenario, inconsistent `StatusCode` usage |
+| Phase 1 | `Contact` / `Account` identity model and community identity mapping agreed | Duplicate contacts, broken applicant linkage, poor 360 views |
+| Phase 2 | Phase 1 foundation (metadata spine, draft/submit pattern, clerk app) | Duplicate patterns per scenario, inconsistent `InternalStatus` / `Status` usage |
 | Phase 2 | `ApplicationFormField` naming standards and DataRaptor / save contracts | Reporting fragmentation, expensive refactors |
 | Phase 3 | Phase 2 first vertical slice (checklist, action plan, OmniScript save pattern) | Each scenario implemented as a one-off; higher defect rate |
-| Phase 3 | Clarification on field verification target object (`Inspection` vs `Visit` vs `RecordAction` only) | Rework of field verification and reporting |
+| Phase 3 | Clarification on field verification target object (`Visit` + `InspectionType` vs `RecordAction` only) | Rework of field verification and reporting |
 | All | Legal/privacy sign-off on sensitive ID and program data handling and **statutory privacy** processes where applicable | Blocked production rollout or forced retrofit |
 
 ---
 
 ## What We Are NOT Building
 
-- **Custom Salesforce objects** for program-specific “registries” when **`IndividualApplication`** or **`BusinessLicenseApplication`** (as appropriate) **+ `RegulatoryTxn` + `ApplicationFormField`** suffice per [docs/adr-pss.md](adr-pss.md).
+- **Custom Salesforce objects** for program-specific “registries” when **`IndividualApplication`** or **`BusinessLicenseApplication`** (as appropriate) **+ `ApplicationFormField`** suffice per [docs/adr-pss.md](adr-pss.md).
 - **Standard `Asset` adoption** for physical assets unless a follow-on ADR selects it and defines migration from form-only capture.
 - **Payment gateway selection, Payment Card Industry (PCI) design, and legacy host system of record** — separate integration and payment ADRs.
 - **Full `RegulatoryCode` corpus** for every statute unless Phase 3 scope explicitly includes catalog load and ownership.
@@ -193,7 +188,7 @@ Add **additional service paths** your program requires—renewals, amendments, a
 Carried forward from [docs/adr-pss.md](adr-pss.md):
 
 1. **System of record** for authoritative program data: legacy host only vs. Salesforce holding a read-only cache—**integration ADR** and data retention rules.
-2. **Exact `StatusCode` picklists** for **`IndividualApplication`**, **`BusinessLicenseApplication`** (if used), and **`RegulatoryTxn`** aligned to **State and Local Government** program business states (e.g., “Pending inspection,” “Pending payment”).
+2. **Exact status picklists** (`InternalStatus` on **`IndividualApplication`**, `Status` on **`BusinessLicenseApplication`**) aligned to **State and Local Government** program business states (e.g., “Pending inspection,” “Pending payment”).
 3. Whether **`Asset`** (standard) will represent physical assets for future services—impacts whether some “fields” move from form-only to Asset fields.
 4. **Payment capture** channel: integrated pay in Experience Cloud vs. clerk-only vs. external—drives OmniScript steps and **Payment Card Industry (PCI)** scope.
 5. **External financial or partner systems** rules and which fields must be **read-only** from integration vs. user-entered.
