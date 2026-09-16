@@ -35,10 +35,10 @@ Discovery Framework assessment object details overlap **Education Cloud Integrat
 
 ## Principles
 
-1. **Native-only**: Use PSS standard objects. Never propose custom objects for features covered by `BusinessLicense`, `BusinessLicenseApplication`, `IndividualApplication`, `Benefit`, `RegulatoryTxn`, `Permit`, `Inspection`, `FundingAward`, `FundingOpportunity`, `FundingDisbursement`, `Complaint`, `Appeal`, or their child objects.
-2. **API names first**: Always lead with the Salesforce **application programming interface (API)** name. Use field-level names (`StatusCode`, `LicensedEntityId`) not labels.
+1. **Native-only**: Use PSS standard objects. Never propose custom objects for features covered by `BusinessLicense`, `BusinessLicenseApplication`, `IndividualApplication`, `Benefit`, `FundingAward`, `FundingOpportunity`, `FundingDisbursement`, `PublicComplaint`, `ComplaintCase`, `RegulatoryCodeViolation`, `ViolationEnforcementAction`, or their child objects.
+2. **API names first**: Always lead with the Salesforce **application programming interface (API)** name. Use field-level names (`InternalStatus`, `RegulatoryAuthorizationTypeId`) not labels.
 3. **Relationship precision**: Distinguish lookups from master-detail; call out polymorphic lookups (`RelatedEntityId`, `SubjectEntityId`) explicitly and their implications for SOQL, rollup summaries, and sharing.
-4. **Party model**: All constituent identity resolves through `Individual` / `Party`. Do not anchor solutions to `Contact` alone.
+4. **Identity model**: Person identity resolves through `Contact`. Use `Account` for organizational parties. `Individual` is the GDPR privacy companion (consent flags, `ShouldForget`) — not a person-identity record. `Party` is not a standalone accessible object in PSS v68.0.
 5. **RegulatoryCode as spine**: Citations across Inspections, Enforcement, Complaints, and Appeals all reference `RegulatoryCode`. Model accordingly.
 6. **Discovery Framework for intake**: Eligibility screening and intake assessments use `AssessmentQuestion*` objects — not custom survey objects. Version management matters for in-flight assessments.
 7. **Trade-offs**: Call out when a native object's field set is insufficient and the correct extension path (custom fields on standard objects vs. related custom objects vs. OmniScript data JSON).
@@ -47,27 +47,26 @@ Discovery Framework assessment object details overlap **Education Cloud Integrat
 
 ### Licensing and permitting
 
-- **Business license (Account / licensed entity):** `BusinessLicense` / `LicensedEntity` → **`BusinessLicenseApplication`** as the **filing spine** for apply and renew (Experience or internal channel). **Do not** use **`IndividualApplication`** as the primary application object when the **applicant is a business**—that object is for **person**-centric filings.
-- **Person-centric permit or program intake** where the product model uses it: `Permit` / program objects may pair with **`IndividualApplication`** or **`PermitApplication`** per domain; follow **sf-pss-data-dev** and Object Manager for your org.
-- `Permit` → `PermitApplication` → `PermitApplicationReview` (multi-department review)
-- Fee schedule lives on `LicenseType` / `PermitType`; integrate with Revenue Cloud or custom fee objects when needed
-- Renewal workflows: Flow on `ExpirationDate` approaching → new **`BusinessLicenseApplication`** (business licenses) or the applicable renewal object for the domain
+- **Business license or permit:** `BusinessLicense` → **`BusinessLicenseApplication`** as the **filing spine** for apply and renew. Licenses and permits are both modeled on `BusinessLicense`; the distinction is `RegulatoryAuthorizationType.RegulatoryAuthCategory`. **Do not** use **`IndividualApplication`** as the primary application object when the **applicant is a business** — that object is for **person**-centric filings. There are **no** separate `Permit`, `PermitApplication`, `PermitType`, or `LicensedEntity` objects in PSS v68.0.
+- **Person-centric program intake:** `IndividualApplication` with `ContactId → Contact`; for benefits, grants, and individual permits where the filing is person-centric.
+- Authorization type: `RegulatoryAuthorizationType` (field: `RegulatoryAuthCategory` picklist). **No `LicenseType` or `PermitType` objects** — use `RegulatoryAuthorizationType` for all authorization-class metadata; fee schedule lives on its fields.
+- Renewal workflows: Flow on `BusinessLicense.PeriodEnd` approaching → new **`BusinessLicenseApplication`**
 
 ### Inspections and enforcement
 
-- `Permit` or `Violation` → `Inspection` (polymorphic `RelatedEntityId`)
-- `InspectionFinding` → `RegulatoryCode` → triggers `Violation` → `EnforcementAction`
-- Field officer mobile: OmniScript + `Visit` + `Inspection` + offline sync considerations
-- Checklist templates: `InspectionType` defines items; cloned to `InspectionChecklistItem` on Inspection creation
-- **Action plans vs inspections:** use **`ActionPlanTemplate` / `ActionPlan` / `RecordAction`** for **clerical and procedural** tasking (fees, verification, issuance steps); keep **`Inspection`** for **on-site compliance** evidence and `InspectionFinding` → `RegulatoryCode` chains—see **sf-pss-data-dev** domain map and Visits / Inspections / Dynamic Assessments gallery.
+- `BusinessLicense` or `RegulatoryCodeViolation` → `Visit` (schedules and records the field visit; polymorphic `RelatedEntityId`)
+- `RegulatoryCodeViolation` → `RegulatoryCode` → `ViolationEnforcementAction`
+- Field officer mobile: OmniScript + `Visit` + `InspectionType` + offline sync considerations
+- Assessment questions: `InspectionType` links to `AssessmentQuestion*` via `InspectionAssessmentInd`; **no `Inspection`, `InspectionChecklistItem`, or `InspectionFinding` objects** in PSS v68.0
+- **Action plans vs visits:** use **`ActionPlanTemplate` / `ActionPlan` / `RecordAction`** for **clerical and procedural** tasking (fees, verification, issuance steps); use `Visit` + `InspectionType` + `InspectionAssessmentInd` for **on-site compliance** evidence and `RegulatoryCodeViolation` → `RegulatoryCode` chains — see **sf-pss-data-dev** domain map and [Visits, Inspections & Dynamic Assessments data model](https://developer.salesforce.com/docs/platform/data-models/guide/visits-inspections-dynamic-assessments.html).
 
 ### Benefit and program delivery
 
 - Eligibility screening (person applicant): `AssessmentQuestionSet` → **`IndividualApplication`** → `ProgramEnrollment`
 - **Business licensing** path: `AssessmentQuestionSet` (if used) → **`BusinessLicenseApplication`** / `BusinessLicense`—**not** `IndividualApplication` as the stand-in for the business filing
 - `Benefit` + `BenefitDisbursement` for payment tracking; Accounting Subledger for GL when required
-- Multi-program enrollment: one `Individual` → many `ProgramEnrollment` records
-- Benefit suspension: `StatusCode` change on `Benefit` + status history pattern
+- Multi-program enrollment: one `Contact` → many `ProgramEnrollment` records (via `ContactId`)
+- Benefit suspension: `BenefitStatus` change on `Benefit` + status history pattern
 
 ### Grants management
 
@@ -77,10 +76,11 @@ Discovery Framework assessment object details overlap **Education Cloud Integrat
 
 ### Complaints and appeals
 
-- `Complaint` → `ComplaintFinding` → `ComplaintRemediation`
-- `Appeal` → `AppealHearing` → `AppealDecision`
-- Both link to `RegulatoryTxn` / `EnforcementAction` via `*Association` junction objects where applicable
-- SLA tracking: Entitlements on `Case` linked to `Complaint` when using Case
+- `PublicComplaint` / `ComplaintCase` + `ComplaintParticipant` (party associations)
+- **No `Complaint`, `ComplaintFinding`, `ComplaintRemediation`, `Appeal`, `AppealHearing`, or `AppealDecision` objects** in PSS v68.0 base package
+- Appeals require custom objects or the Investigative Case Management add-on (`CaseProceedingComplaint` / `CaseProceedingResult`)
+- Enforcement link: `RegulatoryCodeViolation` → `ViolationEnforcementAction`
+- SLA tracking: Entitlements on `Case` linked to `ComplaintCase` when using Case
 
 ### Discovery Framework integration
 
@@ -94,8 +94,8 @@ Discovery Framework assessment object details overlap **Education Cloud Integrat
 |----------|---------------------|-----------------|
 | Intake forms | `ApplicationForm` + `ApplicationFormField` | Complex conditional logic → OmniScript |
 | Eligibility rules | `AssessmentIndicator` | ML-based scoring → Einstein or custom Apex |
-| Fee calculation | `LicenseType`/`PermitType` fee fields | Tiered/complex fees → Revenue Cloud |
-| Field inspections | `Inspection` + `InspectionChecklistItem` | Large offline datasets → Mobile SDK |
+| Fee calculation | `RegulatoryAuthorizationType` fields | Tiered/complex fees → Revenue Cloud |
+| Field inspections | `Visit` + `InspectionType` + `InspectionAssessmentInd` | Large offline datasets → Mobile SDK |
 | Benefit payments | `BenefitDisbursement` | ACH/EFT disbursement → Financial Services integration |
 | Grant reporting | `FundingDisbursement` grouping | Federal SEFA reporting → Accounting Subledger |
 
